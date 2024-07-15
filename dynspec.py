@@ -68,7 +68,7 @@ class spectra:
         # self.ftop=fch1+bwchan*0.5
         self.fch1=fch1
         self.bwchan=bwchan
-        self.nchan=np.int(nchan)
+        self.nchan=np.int64(nchan)
         self.tsamp=tsamp
         self.header={'az_start': 0.0,
         'barycentric': None,
@@ -496,7 +496,7 @@ def boxcar_func(t,t0,a,width):
     samp_diff=np.diff(t)[0]
     hw=width/2
     p1=np.argmin(np.abs(t-t0+hw))
-    y[p1:p1+np.int(width)]=a
+    y[p1:p1+np.int64(width)]=a
 
     return y
 
@@ -688,3 +688,4 @@ def L2_flux(base2):
     # sf=base2
 
     return flux
+
