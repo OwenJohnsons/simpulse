@@ -11,10 +11,11 @@ console = Console()
 def main():
     from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
     
-    parser = ArgumentParser(description='Script description', formatter_class=ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-l', '--label',type=str, default="test",help='Output File Name, no suffix')
+    parser = ArgumentParser(description='Generate synthetic bursts and inject them into dynamic spectra for testing search pipelines and calibration workflows.', formatter_class=ArgumentDefaultsHelpFormatter)
+    
+    parser.add_argument('-o', '--output', required=True, type=str, help='Output File Name, no suffix')
     parser.add_argument('-m', '--mode',type=str, default="single",help='Injection modes: single, scat, boxcar')
-    parser.add_argument('--snmode',type=str, default="fluence",help='Injection : fluence or snr')
+    parser.add_argument('--snmode',type=str, default="fluence", help='Injection : fluence or snr')
     parser.add_argument('-A','--amplitude',type=float, default=50,help='Injection : fluence or snr')
     parser.add_argument('-t','--tbin',type=int, default=10,help='time samples per bin during simulation')
     parser.add_argument('-f','--fbin',type=int, default=10,help='freq channels per bin during simulation')
@@ -23,16 +24,15 @@ def main():
     parser.add_argument('--tsamp',type=int, default=1,help='time resolution (ms)')
     parser.add_argument('--fch1',type=int, default=1100,help='first channel center freq')
     parser.add_argument('--bwchan',type=int, default=1,help='injection block sample length')
-    parser.add_argument('-N','--npulse',type=int, default=50,help='number of pulses to inject')
+    parser.add_argument('-N','--npulse',type=int, default=5,help='number of pulses to inject')
     parser.add_argument('--dm_start',type=float, default=0,help='min dm (pc cm-3)')
-    parser.add_argument('--step',type=float, default=50,help='step dm (pc cm-3)')
+    parser.add_argument('--step',type=float, default=10,help='step dm (pc cm-3)')
     parser.add_argument('--dm',type=float, default=3000,help='max dm (pc cm-3)')
     parser.add_argument('--sig_start',type=float, default=0.5,help='starting pulse width sigma (ms)')
     parser.add_argument('--sig_step',type=float, default=0.5,help='starting pulse width sigma (ms)')
     parser.add_argument('--sig',type=float, default=0.5,help='max pulse width sigma (ms)')
     values = parser.parse_args()
 
-    # original logic unchanged
     sigmarange=np.arange(values.sig_start,values.sig+0.5*values.sig_step,values.sig_step)
     dmrange=np.arange(values.dm_start,values.dm+0.5*values.step,values.step)
     tbin=values.tbin
