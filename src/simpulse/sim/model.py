@@ -2,7 +2,7 @@
 
 import numpy as np
 import math as m
-import fbio
+from simpulse.io.fbio import makefilterbank
 from scipy.signal import convolve
 import matplotlib.pyplot as plt
 
@@ -10,6 +10,17 @@ import matplotlib.pyplot as plt
 from .noise import NoiseMixin
 from .burst import BurstMixin
 from .measurement import MeasurementMixin
+
+def freq_splitter_idx(n, skip, end, bwchan, fch1):
+    ### generates the frequency of channels and then group them into subbands, 
+    ### also returns an array that records the channel numbers of each subband
+    dw = (end - skip) / n
+    vi = (np.arange(n) + 0.5) * dw * bwchan
+    base = fch1 + skip * bwchan
+    vi = base + vi
+    chan_idx = (np.arange(n) * dw + skip)
+    chan_idx = np.append(chan_idx, end).astype(np.int64)
+    return vi, chan_idx
 
 
 class TimeSeries:
@@ -107,7 +118,7 @@ class Spectra(NoiseMixin, BurstMixin, MeasurementMixin):
         base : float
             base level of array
         """
-        self.filterbank = fbio.makefilterbank(file_name + ".fil", header=self.header)
+        self.filterbank = makefilterbank(file_name + ".fil", header=self.header)
         self.fil_std = std
         self.fil_base = base
 
@@ -208,27 +219,4 @@ class fgrid:
 
         self.model_burst = np.mean(self.array.reshape(self.nchan, fbin, self.nsamp), axis=1)
         return self.model_burst
-
-
-
-# Independent functions (kept in model.py so that BurstMixin/NoiseMixin can import them):
-
-def boxcar_func(t, t0, a, width):
-    y = np.zeros(t.shape[0])
-    samp_diff = np.diff(t)[0]
-    hw = width / 2
-    p1 = np.argmin(np.abs(t - t0 + hw))
-    y[p1:p1 + np.int64(width)] = a
-    return y
-
-
-def freq_splitter_idx(n, skip, end, bwchan, fch1):
-    ### generates the frequency of channels and then group them into subbands, 
-    ### also returns an array that records the channel numbers of each subband
-    dw = (end - skip) / n
-    vi = (np.arange(n) + 0.5) * dw * bwchan
-    base = fch1 + skip * bwchan
-    vi = base + vi
-    chan_idx = (np.arange(n) * dw + skip)
-    chan_idx = np.append(chan_idx, end).astype(np.int64)
-    return vi, chan_idx
+    

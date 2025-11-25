@@ -8,7 +8,8 @@ import sys
 import logging
 # import bilby
 # from astropy import units as u
-import sigpyproc as sgp
+# import sigpyproc as sgp
+from simpulse.io import sigproc as sgp
 
 __author__ = "Harry Qiu"
 

@@ -4,6 +4,25 @@ import numpy as np
 import math as m
 from scipy.signal import convolve
 
+def dedisperse(dynamic_spectrum, dm, vif, fch1, tsamp):
+    """Basic brute-force dedispersion."""
+    out = np.zeros_like(dynamic_spectrum)
+    nchan = dynamic_spectrum.shape[1]
+
+    for i in range(nchan):
+        delay = tidm(dm, vif[i], fch1)
+        shift = int(delay / tsamp)
+        out[:, i] = np.roll(dynamic_spectrum[:, i], -shift)
+
+    return out
+
+def boxcar_func(t, t0, a, width):
+    y = np.zeros(t.shape[0])
+    samp_diff = np.diff(t)[0]
+    hw = width / 2
+    p1 = np.argmin(np.abs(t - t0 + hw))
+    y[p1:p1 + np.int64(width)] = a
+    return y
 
 class BurstMixin:
     """
@@ -81,9 +100,7 @@ class BurstMixin:
         base = base * bandfrac[:,None,None]
         base = base.reshape(self.nchan*self.fbin, nsamp)
 
-        self.burst_original = np.transpose(
-            base.reshape(self.nchan, self.fbin, nsamp).mean(1).T * bandfrac
-        )
+        self.burst_original = base.reshape(self.nchan, self.fbin, nsamp).mean(1).T * bandfrac
 
         ### dedisperse
         self.burst_dedispersed = dedisperse(self.burst_original,
