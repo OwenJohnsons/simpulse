@@ -110,6 +110,9 @@ class BurstMixin:
                                             tsamp=self.tsamp)
         return self.burst_original, self.burst_dedispersed
 
+def single_pulse_smear(t, t0, width, A):
+    """Single gaussian pulse"""
+    return gaus_func(t, t0, width) * A
 
 def gaus_func(t,t0,sigi):
     #ti=0### gaussian function returns a function with amplitude of 10
