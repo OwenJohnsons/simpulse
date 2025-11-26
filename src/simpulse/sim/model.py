@@ -1,10 +1,10 @@
 # sim/model.py
-
+import matplotlib.pyplot as plt
 import numpy as np
 import math as m
 from simpulse.io.fbio import makefilterbank
 from scipy.signal import convolve
-import matplotlib.pyplot as plt
+from astropy.time import Time
 
 # Import mixins (implemented in other files)
 from .noise import NoiseMixin
@@ -99,12 +99,18 @@ class Spectra(NoiseMixin, BurstMixin, MeasurementMixin):
 
         # Header for filterbank writing
         self.header = {
-            "telescope_id": 6,
-            "fch1": fch1,
-            "foff": -bwchan,
-            "nchans": nchan,
-            "tsamp": tsamp / 1000,
-            "nbits": nbits,
+            "telescope_id": 6,         
+            "machine_id": 0,            # fake backend
+            "data_type": 1,             # filterbank
+            "fch1": fch1,               # MHz
+            "foff": -bwchan,            # MHz per channel
+            "nchans": nchan,            # number of channels
+            "nbits": nbits,             
+            "nifs": 1,                  # number of IFs
+            "tsamp": tsamp / 1000.0,    
+            "tstart": Time.now().mjd,   # MJD start
+            "source_name": "SIMULATED",
+            "nsamples": None
         }
 
     def create_filterbank(self, file_name, std=np.sqrt(336), base=127):

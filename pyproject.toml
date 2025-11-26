@@ -23,6 +23,7 @@ dependencies = [
 
 [project.scripts]
 simpulse = "simpulse.simpulse_cli:main"
+simperiod = "simpulse.simperiod_cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
