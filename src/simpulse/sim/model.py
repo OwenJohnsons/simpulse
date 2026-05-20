@@ -8,7 +8,7 @@ from astropy.time import Time
 
 # Import mixins (implemented in other files)
 from .noise import NoiseMixin
-from .burst import BurstMixin
+from .burst import BurstMixin, tidm, pdrift, delta_t, scat_pulse
 from .measurement import MeasurementMixin
 
 def freq_splitter_idx(n, skip, end, bwchan, fch1):
@@ -65,7 +65,6 @@ class TimeSeries:
         tims = np.mean(invscat_pulse(self.grid, t0, tau, width, 0, 100, 1000).reshape(self.nsamp, -1), axis=1)
         self.spectra = tims / np.max(tims) * a
         return self.spectra
-
 
 
 class Spectra(NoiseMixin, BurstMixin, MeasurementMixin):

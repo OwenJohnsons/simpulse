@@ -3,6 +3,7 @@
 import numpy as np
 import math as m
 from scipy.signal import convolve
+from .measurement import L2_clean
 
 def dedisperse(dynamic_spectrum, dm, vif, fch1, tsamp):
     """Basic brute-force dedispersion."""
@@ -15,6 +16,21 @@ def dedisperse(dynamic_spectrum, dm, vif, fch1, tsamp):
         out[:, i] = np.roll(dynamic_spectrum[:, i], -shift)
 
     return out
+
+def scat_pulse(t,t0,tau1,sigma,alpha,a,vi):
+
+    # print (vi)
+    kernel=t
+    gt0=0
+    pulse=gaus_func(t,t0,sigma) ## create pulse
+    scat_corr=scattering(kernel,gt0,tau1,alpha,vi) ## create scatter kernel
+    # flux=convolve(scat_corr,pulse,'same')
+    sf=convolve(pulse,scat_corr,'full')[:len(pulse)]
+    # sn_norm=quick_snr(sf)
+    sn_norm=np.max(sf)
+
+    flux=sf/sn_norm### normalise
+    return a*flux
 
 def boxcar_func(t, t0, a, width):
     y = np.zeros(t.shape[0])
@@ -31,7 +47,8 @@ class BurstMixin:
     """
 
     def burst(self,t0=100,dm=200,width=1,A=20,nsamp=5000,mode="boxcar",
-              kscat=False,tau=0.1,alpha=4,offset=0.,dmoff=0,drift=0,bandfrac=None):
+              kscat=False,tau=0.1,alpha=4,offset=0.,dmoff=0,drift=0,bandfrac=None,
+              snr=None,snmode="amplitude"):
         """Create a dispersed pulse in noiseless data. Outputs both the dedispered and dedispersed pulse
         Parameters
         ----------
@@ -47,6 +64,11 @@ class BurstMixin:
             This sets the length of the array. Must be long enough for the dispersion track.
         A : float
             This is now the channel amplitude of the pulse with whichever mode, this parameter decides the injected value of the boxcar.
+        snr : float, optional
+            Target SNR value. If provided with snmode='snr', amplitude will be scaled to achieve this SNR.
+        snmode : str
+            'amplitude' (default): Use A directly as amplitude
+            'snr': Scale A to achieve target SNR value
         """
 
         self.dm=dm
@@ -86,7 +108,7 @@ class BurstMixin:
             if mode == "boxcar":
                 pulse = boxcar_func(time, tstart, A, width)
             elif mode == "scat":
-                pulse = scat_pulse_smear(time, tstart, width, A, tscat)
+                pulse = scat_pulse(time, tstart, tscat, width, alpha, A, fgrid[i])
             elif mode == "single":
                 pulse = single_pulse_smear(time, tstart, width, A)
             else:
@@ -108,6 +130,15 @@ class BurstMixin:
                                             vif=self.vif,
                                             fch1=self.fch1,
                                             tsamp=self.tsamp)
+
+        ### Scale amplitude to achieve target SNR
+        if snmode == "snr" and snr is not None:
+            actual_snr = L2_clean(self.burst_dedispersed)
+            if actual_snr > 0:
+                scale_factor = snr / actual_snr
+                self.burst_original = self.burst_original * scale_factor
+                self.burst_dedispersed = self.burst_dedispersed * scale_factor
+
         return self.burst_original, self.burst_dedispersed
 
 def single_pulse_smear(t, t0, width, A):
@@ -122,13 +153,11 @@ def gaus_func(t,t0,sigi):
     ### normalisation factor is 1/np.sqrt(np.pi*2*(sigi**2)) replace A with this term for a total of 1 pdf
     return sit
 
-
 def scattering(t,t_0,tau1,alpha=4,v=1000):
     ###tau=tau1/1000 ## ms
     flux=np.zeros(len(t))
     flux[t>=t_0]=np.exp(-(t[t>=t_0]-t_0)/(tau1*(v/1000)**(-alpha)))
     return flux
-
 
 def inverse_scattering(t,t_0,tau1,alpha=4,v=1000):
     ###tau=tau1/1000 ## ms
@@ -136,12 +165,11 @@ def inverse_scattering(t,t_0,tau1,alpha=4,v=1000):
     flux[t<t_0]=np.exp((t_0-t[t<t_0])/(tau1*(v/1000)**(-alpha)))
     return flux
 
-
 def tidm(dm,vi,fch1):
     """ dispersion time delay offset """
-    d=4148.808
-    v=vi/1000
-    top=fch1/1000
+    d=4.149  # Dispersion constant for frequencies in GHz in ms
+    v=vi/1000  # Convert MHz to GHz
+    top=fch1/1000  # Convert MHz to GHz
     dt = d * dm * (v**(-2) - top**(-2))
     return dt  ### ms
 
@@ -151,3 +179,24 @@ def pdrift(driftrate,vi,fch1):
     top=fch1/1000
     dt = driftrate * (v - top)
     return dt
+
+def delta_t(dm,v,bwchan): ### calculate dm smearing
+    """Calculate dm smearing
+    Parameters
+    ----------
+    dm : float
+        Dispersion measure value
+    v : float
+        frequency of channel MHz
+    bwchan : float
+        channel bandwidth MHz
+    ---------
+    Return smearing width in ms
+
+    """
+    v=v/1000 ###MHz ---> GHz
+    B=bwchan 
+    inverse_v=1/v #### 1/GHz
+    #print(v)
+    dt=8.3*dm*(inverse_v**3)*B/2.355 #### unit:us, fwhm ---> 1 sigma
+    return dt/1000 ###us ---> ms
